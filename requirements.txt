@@ -1,9 +1,9 @@
-fastapi
-uvicorn
-python-multipart
-opencv-python
-onnxruntime
-numpy
-pillow
-torch
-torchvision
+fastapi              # FastAPI: Framework web moderno y rápido para construir APIs con Python.
+uvicorn              # Uvicorn: Servidor ASGI ligero y rápido para ejecutar aplicaciones FastAPI.
+python-multipart     # Python Multipart: Manejo de archivos y formularios en FastAPI.
+opencv-python        # OpenCV: Biblioteca para procesamiento de imágenes y visión por computadora.
+onnxruntime          # ONNX Runtime: Motor de inferencia para modelos ONNX.
+numpy                # NumPy: Biblioteca fundamental para cálculos numéricos en Python.
+pillow               # Pillow: Biblioteca para manipulación de imágenes en Python.
+torch                # PyTorch: Biblioteca de aprendizaje profundo para entrenamiento y despliegue de modelos.
+torchvision          # TorchVision: Conjunto de herramientas para visión por computadora en PyTorch.
