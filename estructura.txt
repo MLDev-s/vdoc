@@ -1,0 +1,25 @@
+C:\repo_python\vdoc\
+├─ main.py
+├─ utils.py
+├─ utils_reglas.py
+├─ entrenar_y_exportar.py
+├─ preparar_dataset.py
+├─ limpiar_imagenes_corruptas.py
+├─ requirements.txt
+├─ model.onnx
+├─ umbral.json                     (opcional: umbral dinámico)
+├─ dataset\
+│  ├─ train\
+│  │  ├─ documento_fisico\        (imágenes para entrenamiento)
+│  │  └─ pantalla\
+│  ├─ val\
+│  │  ├─ documento_fisico\        (imágenes para validación)
+│  │  └─ pantalla\
+│  ├─ docxpand\                   (fuente opcional usada por preparar_dataset.py)
+│  │  └─ DocXPand-25k\
+│  └─ MIDV2020\                   (fuente opcional usada por preparar_dataset.py)
+│     └─ dataset\
+│        ├─ photo\
+│        └─ images\
+├─ pantalla\                       (tus ejemplos de pantallas/dispositivos)
+└─ entrenamiento_metricas.png      (se genera al entrenar; opcional)
