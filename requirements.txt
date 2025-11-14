@@ -7,3 +7,4 @@ numpy                # NumPy: Biblioteca fundamental para cálculos numéricos e
 pillow               # Pillow: Biblioteca para manipulación de imágenes en Python.
 torch                # PyTorch: Biblioteca de aprendizaje profundo para entrenamiento y despliegue de modelos.
 torchvision          # TorchVision: Conjunto de herramientas para visión por computadora en PyTorch.
+onnxscript          # ONNX Script: Herramientas para trabajar con modelos ONNX en Python.

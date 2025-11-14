@@ -1,4 +1,7 @@
-# Importación de librerías necesarias
+# ======================================================
+# ENTRENAMIENTO DE RESNET18 BINARIA (OPTIMIZADA GPU)
+# ======================================================
+
 import torch
 import torch.nn as nn
 from torchvision import datasets, transforms, models
@@ -7,107 +10,139 @@ from torchvision.models import ResNet18_Weights
 import matplotlib.pyplot as plt
 import os
 
-# Transformaciones con aumento de datos para el conjunto de entrenamiento
+# ======================================================
+# CONFIGURACIÓN INICIAL
+# ======================================================
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.backends.cudnn.benchmark = True  # optimiza kernels para tamaño fijo (224x224)
+
+# ======================================================
+# TRANSFORMACIONES
+# ======================================================
+weights = ResNet18_Weights.DEFAULT
+imagenet_tfms = weights.transforms()  # incluye Resize(224), ToTensor y Normalize(mean/std)
+
 train_transform = transforms.Compose([
-    transforms.Resize((224, 224)),               # Redimensiona las imágenes a 224x224
-    transforms.RandomHorizontalFlip(),           # Aplica inversión horizontal aleatoria
-    transforms.RandomRotation(5),                # Rota la imagen aleatoriamente hasta 5 grados
-    transforms.ColorJitter(brightness=0.2, contrast=0.2),  # Cambia brillo y contraste aleatoriamente
-    transforms.RandomPerspective(distortion_scale=0.2, p=0.5),  # Simula distorsión física
-    transforms.RandomAffine(degrees=0, translate=(0.05, 0.05)),  # Simula desplazamiento
-    transforms.ToTensor(),                       # Convierte la imagen a tensor
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(5),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2),
+    transforms.RandomPerspective(distortion_scale=0.2, p=0.5),
+    transforms.RandomAffine(degrees=0, translate=(0.05, 0.05)),
+    imagenet_tfms,  # normalización oficial de ImageNet
 ])
 
-# Transformaciones para el conjunto de validación (sin aumentos)
-val_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-])
+val_transform = imagenet_tfms  # sin aumentos, solo resize + normalize
 
-# Definición de las rutas a los datasets
+# ======================================================
+# CARGA DE DATASETS
+# ======================================================
 train_dir = "dataset/train"
 val_dir = "dataset/val"
 
-# Carga de datasets desde carpetas organizadas por clases
 train_dataset = datasets.ImageFolder(train_dir, transform=train_transform)
-val_dataset = datasets.ImageFolder(val_dir, transform=val_transform)
+val_dataset   = datasets.ImageFolder(val_dir,   transform=val_transform)
 
-# Mostrar el número de imágenes cargadas
-print(f"Número de imágenes de entrenamiento: {len(train_dataset)}")
-print(f"Número de imágenes de validación: {len(val_dataset)}")
+print(f"🟢 Imágenes de entrenamiento: {len(train_dataset)}")
+print(f"🔵 Imágenes de validación:   {len(val_dataset)}")
 
-# Creación de dataloaders para cargar los datos en lotes
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)  # shuffle=True para aleatorizar
-val_loader = DataLoader(val_dataset, batch_size=16)
+# ======================================================
+# DATALOADERS (OPTIMIZADOS)
+# ======================================================
+train_loader = DataLoader(
+    train_dataset,
+    batch_size=32, shuffle=True,
+    num_workers=6, pin_memory=True, persistent_workers=True
+)
+val_loader = DataLoader(
+    val_dataset,
+    batch_size=64, shuffle=False,
+    num_workers=6, pin_memory=True, persistent_workers=True
+)
 
-# Carga del modelo ResNet18 con pesos preentrenados
-weights = ResNet18_Weights.DEFAULT
+# ======================================================
+# MODELO (RESNET18 PREENTRENADO)
+# ======================================================
 model = models.resnet18(weights=weights)
-
-# Reemplazo de la capa final para clasificación binaria (2 clases)
-model.fc = nn.Linear(model.fc.in_features, 2)
-
-# Envío del modelo al dispositivo (GPU si está disponible)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.fc = nn.Linear(model.fc.in_features, 2)  # clasificación binaria
 model = model.to(device)
 
-# Definición del optimizador y función de pérdida
+# ======================================================
+# OPTIMIZADOR Y FUNCIÓN DE PÉRDIDA
+# ======================================================
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 criterion = nn.CrossEntropyLoss()
 
-# Listas para guardar métricas de entrenamiento
+# ======================================================
+# ENTRENAMIENTO
+# ======================================================
+scaler = torch.cuda.amp.GradScaler(enabled=(device.type == "cuda"))
+
 train_losses = []
 val_accuracies = []
+best_acc = 0.0
 
-# Entrenamiento del modelo por 10 épocas
-for epoch in range(10):
-    model.train()  # Modo entrenamiento (activa dropout/batchnorm)
-    total_loss = 0
+EPOCHS = 10
 
-    # Bucle de entrenamiento por lote
+for epoch in range(EPOCHS):
+    model.train()
+    total_loss = 0.0
+
     for images, labels in train_loader:
-        images, labels = images.to(device), labels.to(device)
-        optimizer.zero_grad()            # Reinicia los gradientes
-        outputs = model(images)          # Forward pass
-        loss = criterion(outputs, labels)  # Cálculo de pérdida
-        loss.backward()                  # Backward pass
-        optimizer.step()                 # Actualización de pesos
-        total_loss += loss.item()        # Acumulación de pérdida
+        images = images.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
+
+        optimizer.zero_grad(set_to_none=True)
+        with torch.cuda.amp.autocast(enabled=(device.type == "cuda")):
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+
+        total_loss += loss.item()
 
     avg_loss = total_loss / len(train_loader)
     train_losses.append(avg_loss)
-    print(f"Época {epoch+1} - Pérdida entrenamiento: {avg_loss:.4f}")
+    print(f"📘 Época {epoch+1}/{EPOCHS} | Pérdida: {avg_loss:.4f}")
 
-    # Evaluación del modelo en el conjunto de validación
+    # ========================
+    # VALIDACIÓN
+    # ========================
     model.eval()
     correct = 0
     total = 0
-
-    with torch.no_grad():  # No se calculan gradientes en validación
+    with torch.inference_mode():
         for images, labels in val_loader:
-            images, labels = images.to(device), labels.to(device)
+            images = images.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
             outputs = model(images)
-            _, predicted = torch.max(outputs, 1)  # Selección de clase con mayor probabilidad
+            _, predicted = torch.max(outputs, 1)
             correct += (predicted == labels).sum().item()
             total += labels.size(0)
 
-    acc = correct / total
+    acc = correct / max(1, total)
     val_accuracies.append(acc)
-    print(f"  → Precisión en validación: {acc:.4f}")
+    print(f"   🔹 Precisión validación: {acc:.4f}")
 
-# Graficar pérdida de entrenamiento y precisión de validación
+    # Guarda el mejor modelo
+    if acc > best_acc:
+        best_acc = acc
+        torch.save(model.state_dict(), "best_model.pth")
+        print("💾 Guardado nuevo mejor modelo: best_model.pth")
+
+# ======================================================
+# GRÁFICAS DE RESULTADOS
+# ======================================================
 epochs = list(range(1, len(train_losses) + 1))
-
 plt.figure(figsize=(10, 5))
 
-# Gráfico de pérdida
 plt.subplot(1, 2, 1)
 plt.plot(epochs, train_losses, marker='o')
 plt.title('Pérdida por Época')
 plt.xlabel('Época')
 plt.ylabel('Pérdida')
 
-# Gráfico de precisión
 plt.subplot(1, 2, 2)
 plt.plot(epochs, val_accuracies, marker='o', color='green')
 plt.title('Precisión en Validación')
@@ -115,10 +150,24 @@ plt.xlabel('Época')
 plt.ylabel('Precisión')
 
 plt.tight_layout()
-plt.savefig("entrenamiento_metricas.png")  # Guarda la figura como imagen
+plt.savefig("entrenamiento_metricas.png")
 print("📊 Gráfica guardada como entrenamiento_metricas.png")
 
-# Exportación del modelo a formato ONNX
-dummy_input = torch.randn(1, 3, 224, 224).to(device)  # Entrada simulada
-torch.onnx.export(model, dummy_input, "model.onnx", input_names=["input"], output_names=["output"], opset_version=11)
+# ======================================================
+# EXPORTACIÓN A ONNX (VERSIÓN POR DEFECTO)
+# ======================================================
+model.eval()
+dummy_input = torch.randn(1, 3, 224, 224, device=device)
+torch.onnx.export(
+    model,
+    dummy_input,
+    "model.onnx",
+    input_names=["input"],
+    output_names=["output"]
+)
 print("✅ Modelo exportado como model.onnx")
+
+# Verificar opset
+import onnx
+m = onnx.load("model.onnx")
+print(f"🧩 Opset version usada: {m.opset_import[0].version}")

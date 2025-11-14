@@ -5,16 +5,15 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 # ==== Rutas del dataset base ====
-DOCXPAND_DOCUMENTS_DIR      = r"C:\repo_python\vdoc\dataset\docxpand\DocXPand-25k\documents"
-MIDV2020_PHOTO_DIR           = r"C:\repo_python\vdoc\dataset\MIDV2020\dataset\photo"
-MIDV2020_SCAN_UPRIGHT_DIR    = r"C:\repo_python\vdoc\dataset\MIDV2020\dataset\scan_upright"
-MIDV2020_SCAN_ROTATED_DIR    = r"C:\repo_python\vdoc\dataset\MIDV2020\dataset\scan_rotated"
-OUTPUT_DIR                   = r"C:\repo_python\vdoc\dataset"
+DOCXPAND_DOCUMENTS_DIR      = r"/mnt/d/entrenamiento/DocXPand-25k.tar.gz/DocXPand-25k/documents"
+MIDV2020_PHOTO_DIR          = r"/mnt/c/Users/poyo_/MIDV2020/dataset/photo"
+MIDV2020_SCAN_UPRIGHT_DIR   = r"/mnt/c/Users/poyo_/MIDV2020/dataset/scan_upright"
+MIDV2020_SCAN_ROTATED_DIR   = r"/mnt/c/Users/poyo_/MIDV2020/dataset/scan_rotated"
+OUTPUT_DIR                  = r"/home/tsgeorge/Development/validateDoc/test2/vdoc/dataset"
 
 # ==== Rutas extra del usuario ====
-IMG_REALES_DIR               = r"C:\repo_python\vdoc\dataset\img_reales"
-IMG_FALSOS_DIR               = r"C:\repo_python\vdoc\dataset\img_falsos"
-
+IMG_REALES_DIR              = r"/home/tsgeorge/Development/validateDoc/test2/vdoc/imgs/img_reales"
+IMG_FALSOS_DIR              = r"/home/tsgeorge/Development/validateDoc/test2/vdoc/imgs/img_falsos"
 TRAIN_RATIO = 0.8
 EXTENSIONES_VALIDAS = [".jpg", ".jpeg", ".png"]
 CLEAR_OUTPUT = True  # borra dataset/train y dataset/val antes de reconstruir

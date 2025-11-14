@@ -1,4 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+
+
+# Datasets
 dataset/docxpand/
 dataset/img_falsos/
 dataset/img_reales/
-dataset/MIDV2020/	
+dataset/MIDV2020/
+dataset/train/
+dataset/val/
+imgs/
+
+
+
+
+
+# Logs
+*.log
+logs/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+*.Zone.Identifier
+
+# Temporal
+*.tmp
+*.bak
+*.swp
